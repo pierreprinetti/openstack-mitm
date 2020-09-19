@@ -68,14 +68,3 @@ func TestSplitAlias(t *testing.T) {
 		})
 	}
 }
-
-// func TestNew(t *testing.T) {
-// 	u, err := url.Parse("https://kaizen.massopen.cloud:13000/")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	targets := NewAddressBook("localhost:2443")
-// 	targets.Set("auth", *u)
-
-// 	input,err:= url.Parse("")
-// }
