@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/BurntSushi/xdg"
 	"github.com/shiftstack/os-proxy/proxy"
@@ -34,8 +33,8 @@ const (
 )
 
 var (
-	proxyURL  = flag.String("proxyurl", "", "The host this proxy will be reachable")
-	osAuthURL = flag.String("authurl", "", "OpenStack entrypoint (OS_AUTH_URL)")
+	proxyURLstring = flag.String("proxyurl", "", "The host this proxy will be reachable")
+	osAuthURL      = flag.String("authurl", "", "OpenStack entrypoint (OS_AUTH_URL)")
 )
 
 func getAuthURL(cloudName string) (string, error) {
@@ -78,7 +77,7 @@ func getAuthURL(cloudName string) (string, error) {
 func main() {
 	flag.Parse()
 
-	if *proxyURL == "" {
+	if *proxyURLstring == "" {
 		log.Fatal("Missing required --proxyurl parameter")
 	}
 
@@ -95,37 +94,44 @@ func main() {
 		}
 	}
 
-	var proxyHost, proxyPort string
+	var proxyURL *url.URL
 	{
-		u, err := url.Parse(*proxyURL)
+		var err error
+		proxyURL, err = url.Parse(*proxyURLstring)
 		if err != nil {
 			log.Fatal(err)
 		}
-		proxyHost = u.Host
-		proxyPort = u.Port()
-		if proxyPort == "" {
-			proxyPort = defaultPort
+
+		if proxyURL.Host == "" {
+			log.Fatal("The --proxyurl parameter is invalid. It should be in the form: 'https://host[:port]'.")
+		}
+
+		if proxyURL.Path != "" {
+			log.Fatal("The --proxyurl URL should have empty path.")
+		}
+
+		if proxyURL.Port() == "" {
+			proxyURL.Host = proxyURL.Hostname() + ":" + defaultPort
 		}
 	}
 
-	p, err := proxy.NewOpenstackProxy(*proxyURL, *osAuthURL)
+	p, err := proxy.NewOpenstackProxy(proxyURL.String(), *osAuthURL)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Printf("Rewriting URLs to %q", proxyHost)
+	log.Printf("Rewriting URLs to %q", proxyURL)
 	log.Printf("Proxying %q", *osAuthURL)
 
 	{
-		proxyDomain := strings.SplitN(proxyHost, ":", 2)[0]
-		if err := generateCertificate(proxyDomain); err != nil {
+		if err := generateCertificate(proxyURL.Hostname()); err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Certificate correctly generated for %q", proxyDomain)
+		log.Printf("Certificate correctly generated for %q", proxyURL.Hostname())
 	}
 
-	log.Printf("Starting the server on %q...", proxyPort)
+	log.Printf("Starting the server on port %s...", proxyURL.Port())
 	log.Fatal(
-		http.ListenAndServeTLS(":"+proxyPort, "cert.pem", "key.pem", p),
+		http.ListenAndServeTLS(":"+proxyURL.Port(), "cert.pem", "key.pem", p),
 	)
 }
