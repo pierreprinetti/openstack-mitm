@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+declare -r \
+	keystone_port='8000'          \
+	cinder_port='13776'           \
+	cinder_path='/v2/59322123222' \
+	control_code=42               \
+	osproxy="$1"
+
+declare \
+	osproxy_response='' \
+	cinder_response=''  \
+	keystone_pid=''     \
+	cinder_pid=''       \
+	osproxy_pid=''      \
+	cinder_url=''       \
+	cinder_request=''   \
+	cinder_req_path=''
+
+cinder_request="$(mktemp)"
+readonly cinder_request
+
+cleanup() {
+	declare -ra processes=( "$osproxy_pid" "$keystone_pid" "$cinder_pid" )
+	for pid in "${processes[@]}"; do
+		if [[ -n "$pid" ]]; then
+			kill -TERM "$pid" 2> /dev/null \
+				&& >&2 echo "Process $pid terminated." \
+				|| true
+		fi
+	done
+
+	declare -ra files=( "$cinder_request" )
+	for f in "${files[@]}"; do
+		if [[ -e "$f" ]]; then
+			rm "$f"
+			>&2 echo "Deleted temporary file '$f'."
+		fi
+	done
+}
+
+trap cleanup EXIT
+
+>&2 echo "Exposing a mock Keystone on port $keystone_port"
+nc -l "$keystone_port" >/dev/null <<EOF &
+HTTP/1.1 201 Created
+Date: $(TZ=GMT date +'%a, %d %b %Y %H:%M:%S %Z')
+Server: Apache
+X-Subject-Token: OS-MOCK-TOKEN
+Vary: X-Auth-Token
+x-openstack-request-id: req-$(uuidgen)
+Content-Type: application/json
+
+{"token": {"is_domain": false, "methods": ["password"], "roles": [{"id": "9fb9cd7ee4384b9137a90878d3e92bab", "name": "_member_"}, {"id": "50cc24ad16c4446fa6de7171f57721d9", "name": "creator"}], "expires_at": "$(TZ=Z date +'%Y-%m-%dt%H:%M:%S.000000z' --date '+1 hour')", "project": {"domain": {"id": "default", "name": "default"}, "id": "593227d111111111111111b6b742e8a7", "name": "project-name"}, "catalog": [{"endpoints": [{"region_id": "reg-id", "url": "http://localhost:${cinder_port}${cinder_path}", "region": "reg-id", "interface": "public", "id": "02fc75964873262874648732590af158"}], "type": "volumev2", "id": "f9cbcbcbcbcbcbcbcbcbcbcbcbcbc477", "name": "cinderv2"}], "user": {"password_expires_at": null, "domain": {"id": "default", "name": "default"}, "id": "42222222222222222222222222222eff", "name": "user@example.com"}, "audit_ids": ["ov11111111111111111111"], "issued_at": "$(TZ=Z date +'%Y-%m-%dt%H:%M:%S.000000z')"}}
+EOF
+keystone_pid="$!"
+
+>&2 echo "Exposing a mock Cinder on port $cinder_port"
+nc -l "$cinder_port" >"$cinder_request" <<EOF &
+HTTP/1.1 200 OK
+Date: $(TZ=GMT date +'%a, %d %b %Y %H:%M:%S %Z')
+Server: Netcat
+Content-Type: text/plain
+
+$control_code
+EOF
+cinder_pid="$!"
+
+"$osproxy" \
+	-authurl='http://localhost:8000' \
+	-proxyurl='https://localhost:15432' &
+osproxy_pid="$!"
+
+sleep 5
+
+osproxy_response="$(curl -sSk 'https://localhost:15432/v3/auth/tokens')"
+cinder_url="$(jq -r '.token.catalog[0].endpoints[0].url' <<< "$osproxy_response")"
+cinder_response="$(curl -sSk "$cinder_url")"
+cinder_req_path="$(grep 'GET' "$cinder_request" | cut -d ' ' -f 2)"
+
+if [[ "$cinder_req_path" != "${cinder_path}" ]]; then
+	echo 'Error: the request path to Cinder was not correctly rewritten.'
+	exit 1
+fi
+
+if [[ "$cinder_response" != "$control_code" ]]; then
+	echo 'Error: the content of the mock Cinder was not proxied correctly.'
+	exit 1
+fi
+
+exit 0
