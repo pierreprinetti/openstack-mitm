@@ -16,6 +16,10 @@
 
 set -Eeuo pipefail
 
+declare -r \
+	osproxy_url='https://github.com/shiftstack/os-proxy/releases/download/v1.0.1/os-proxy' \
+	osproxy_sha512='d4a9210091e4d1ed4c697762ac5ed59625c97dbdf3ce58cc4bbd7f3821190f482e2464558fbd08ea737744a7cc496e9b6db4381c3941b8fb1c864d1bec35113f'
+
 print_help() {
 	echo -e "github.com/shiftstack/os-proxy"
 	echo -e "Proxy calls to the OpenStack API"
@@ -136,9 +140,9 @@ cat > "$ignition" <<EOF
       "path": "/usr/local/bin/os-proxy",
       "mode": 493,
       "contents": {
-        "source": "https://github.com/shiftstack/os-proxy/releases/download/v1.0/os-proxy",
+        "source": "${osproxy_url}",
         "verification": {
-          "hash": "sha512-c4129fa9a5a98bd6d87d3bde0ce8e23212816439f358338b44b99327ffeb5e1373f6590af9b6eee4351eb7fe3554dd72476e484a846a324a0aa7e99d942350a7"
+          "hash": "sha512-${osproxy_sha512}"
         }
       }
     }]
