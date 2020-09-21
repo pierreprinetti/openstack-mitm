@@ -40,3 +40,13 @@ Set `OS_PROXY` in the environment, and have the `openstack` client in $PATH.
 	-i 'rhcos'                              \
 	-n 'external'
 ```
+
+## Test
+
+Run `make test`.
+
+Requirements for the test:
+* Bash v4+
+* Go
+* Netcat
+* Jq

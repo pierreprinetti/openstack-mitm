@@ -2,8 +2,12 @@ language: go
 
 go:
 - 1.15.x
-- master
 
-script:
-  - go build -o /tmp/osproxy .
-  - ./test/test /tmp/osproxy
+jobs:
+  include:
+    - name: 'Unit test'
+      script:
+        - make unit-test
+    - name: 'System test'
+      script:
+        - make system-test
