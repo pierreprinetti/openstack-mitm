@@ -77,9 +77,6 @@ func main() {
 		panic(err)
 	}
 
-	log.Printf("Rewriting URLs to %q", proxyURL)
-	log.Printf("Proxying %q", *osAuthURL)
-
 	{
 		if err := generateCertificate(proxyURL.Hostname()); err != nil {
 			log.Fatal(err)
@@ -87,7 +84,9 @@ func main() {
 		log.Printf("Certificate correctly generated for %q", proxyURL.Hostname())
 	}
 
-	log.Printf("Starting the server on port %s...", proxyURL.Port())
+	log.Printf("Proxying to %q", *osAuthURL)
+	log.Printf("Listening on %q", proxyURL)
+
 	log.Fatal(
 		http.ListenAndServeTLS(":"+proxyURL.Port(), "cert.pem", "key.pem", p),
 	)
