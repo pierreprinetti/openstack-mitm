@@ -32,17 +32,25 @@ var (
 	osAuthURL      = flag.String("authurl", "", "OpenStack entrypoint (OS_AUTH_URL)")
 )
 
-func main() {
+func init() {
 	flag.Parse()
 
+	var errexit bool
 	if *proxyURLstring == "" {
-		log.Fatal("Missing required --proxyurl parameter.")
+		errexit = true
+		log.Print("Missing required parameter: --proxyurl")
 	}
 
 	if *osAuthURL == "" {
-		log.Fatal("Missing required --authurl parameter.")
+		log.Print("Missing required parameter: --authurl")
 	}
 
+	if errexit {
+		log.Fatal("Exiting.")
+	}
+}
+
+func main() {
 	var proxyURL *url.URL
 	{
 		var err error
