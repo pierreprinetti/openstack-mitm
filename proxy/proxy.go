@@ -84,10 +84,6 @@ func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) 
 			if err != nil {
 				panic(err)
 			}
-			if _, ok := req.Header["User-Agent"]; !ok {
-				// explicitly disable User-Agent so it's not set to default value
-				req.Header.Set("User-Agent", "")
-			}
 		},
 		ModifyResponse: func(res *http.Response) error {
 			if reqURL := res.Request.URL; reqURL.Scheme == osAuthURL.Scheme && reqURL.Host == osAuthURL.Host && reqURL.Path == "/v3/auth/tokens" {
