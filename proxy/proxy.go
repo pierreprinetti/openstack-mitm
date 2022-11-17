@@ -16,6 +16,7 @@ package proxy
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -25,9 +26,24 @@ import (
 	"strconv"
 )
 
-const debug = false
+type contextKey string
+
+var urlKey contextKey = "original url"
 
 var urlRE = regexp.MustCompile(`"url":\s?"(.*?)"`)
+
+type loggingTransport struct {
+	transport http.RoundTripper
+}
+
+func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	originalURL := req.Context().Value(urlKey).(*url.URL)
+	reqMethod := req.Method
+	reqURL := req.URL
+	res, err := t.transport.RoundTrip(req)
+	log.Printf("%s %q -> %q %d", reqMethod, originalURL, reqURL, res.StatusCode)
+	return res, err
+}
 
 func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) {
 	osAuthURL, err := url.Parse(osAuth)
@@ -54,10 +70,10 @@ func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) 
 	}
 
 	return &httputil.ReverseProxy{
+		Transport: loggingTransport{transport: http.DefaultTransport},
 		Director: func(req *http.Request) {
-			if debug {
-				log.Printf("req in: %s\n", req.URL)
-			}
+			ctx := context.WithValue(req.Context(), urlKey, req.URL)
+			*req = *req.Clone(ctx)
 			if req.URL.Path == "/" {
 				req.URL.Path = "/v3"
 			}
@@ -71,9 +87,6 @@ func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) 
 			}
 		},
 		ModifyResponse: func(res *http.Response) error {
-			if debug {
-				log.Printf("req out: %s\n", res.Request.URL)
-			}
 			if reqURL := res.Request.URL; reqURL.Scheme == osAuthURL.Scheme && reqURL.Host == osAuthURL.Host && reqURL.Path == "/v3/auth/tokens" {
 				body, err := ioutil.ReadAll(res.Body)
 				if err != nil {
