@@ -40,6 +40,8 @@ func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	originalURL := req.Context().Value(urlKey).(*url.URL)
 	reqMethod := req.Method
 	reqURL := req.URL
+	req.Header.Del("X-Forwarded-For")
+	req.Host = req.URL.Host
 	res, err := t.transport.RoundTrip(req)
 	log.Printf("%s %q -> %q %d", reqMethod, originalURL, reqURL, res.StatusCode)
 	return res, err
