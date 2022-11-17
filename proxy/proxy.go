@@ -44,6 +44,7 @@ func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Host = req.URL.Host
 	res, err := t.transport.RoundTrip(req)
 	log.Printf("%s %q -> %q %d", reqMethod, originalURL, reqURL, res.StatusCode)
+	res.Header.Del("strict-transport-security")
 	return res, err
 }
 
