@@ -43,7 +43,11 @@ func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Del("X-Forwarded-For")
 	req.Host = req.URL.Host
 	res, err := t.transport.RoundTrip(req)
-	log.Printf("%s %q -> %q %d", reqMethod, originalURL, reqURL, res.StatusCode)
+	if err != nil {
+		log.Printf("%s %q -> %q FAILED", reqMethod, originalURL, reqURL)
+		return nil, err
+	}
+	log.Printf("%s %q -> %q %s", reqMethod, originalURL, reqURL, res.Status)
 	res.Header.Del("strict-transport-security")
 	return res, err
 }
