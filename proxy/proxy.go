@@ -17,7 +17,7 @@ package proxy
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -87,12 +87,12 @@ func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) 
 		},
 		ModifyResponse: func(res *http.Response) error {
 			if reqURL := res.Request.URL; reqURL.Scheme == osAuthURL.Scheme && reqURL.Host == osAuthURL.Host && reqURL.Path == "/v3/auth/tokens" {
-				body, err := ioutil.ReadAll(res.Body)
+				body, err := io.ReadAll(res.Body)
 				if err != nil {
 					return err
 				}
 				newBody := urlRE.ReplaceAllFunc(body, rewriteFunc)
-				res.Body = ioutil.NopCloser(bytes.NewReader(newBody))
+				res.Body = io.NopCloser(bytes.NewReader(newBody))
 				res.ContentLength = int64(len(newBody))
 				res.Header.Set("Content-Length", strconv.Itoa(len(newBody)))
 			}
