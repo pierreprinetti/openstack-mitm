@@ -1,13 +1,13 @@
 
-test: unit-test system-test
+test: test-unit test-integration
 .PHONY: test
 
-unit-test:
+test-unit:
 	go test -v ./...
-.PHONY: unit-test
+.PHONY: test-unit
 
-system-test: osproxy:=$(shell mktemp)
-system-test:
+test-integration: osproxy:=$(shell mktemp)
+test-integration:
 	go build -o $(osproxy) .
 	./test/test $(osproxy)
 	rm $(osproxy)
