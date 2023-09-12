@@ -52,7 +52,7 @@ func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) {
+func NewOpenstackProxy(proxyURL, osAuth string, transport http.RoundTripper) (*httputil.ReverseProxy, error) {
 	osAuthURL, err := url.Parse(osAuth)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func NewOpenstackProxy(proxyURL, osAuth string) (*httputil.ReverseProxy, error) 
 	}
 
 	return &httputil.ReverseProxy{
-		Transport: loggingTransport{transport: http.DefaultTransport},
+		Transport: loggingTransport{transport: transport},
 		Director: func(req *http.Request) {
 			ctx := context.WithValue(req.Context(), urlKey, req.URL)
 			*req = *req.Clone(ctx)

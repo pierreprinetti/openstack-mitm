@@ -15,10 +15,13 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/shiftstack/os-proxy/proxy"
 )
@@ -28,8 +31,10 @@ const (
 )
 
 var (
-	proxyURLstring = flag.String("proxyurl", "", "The host this proxy will be reachable")
-	osAuthURL      = flag.String("authurl", "", "OpenStack entrypoint (OS_AUTH_URL)")
+	proxyURLstring = flag.String("proxy-url", "", "The address this proxy will be reachable at")
+	osAuthURL      = flag.String("remote-authurl", "", "OpenStack entrypoint (OS_AUTH_URL)")
+	osCaCert       = flag.String("remote-cacert", "", "OpenStack CA certificate (OS_CACERT)")
+	insecure       = flag.Bool("insecure", false, "Insecure connection to OpenStack")
 )
 
 func init() {
@@ -72,7 +77,25 @@ func main() {
 		}
 	}
 
-	p, err := proxy.NewOpenstackProxy(proxyURL.String(), *osAuthURL)
+	transport := http.DefaultTransport.(*http.Transport)
+
+	if caCertPath := *osCaCert; caCertPath != "" {
+		b, err := os.ReadFile(caCertPath)
+		if err != nil {
+			log.Fatalf("Failed to read the given PEM certificate: %v", err)
+		}
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(b) {
+			log.Fatal("Failed to parse the given PEM certificate")
+		}
+		transport.TLSClientConfig = &tls.Config{RootCAs: certPool}
+	}
+
+	if *insecure {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: *insecure}
+	}
+
+	p, err := proxy.NewOpenstackProxy(proxyURL.String(), *osAuthURL, transport)
 	if err != nil {
 		panic(err)
 	}

@@ -9,12 +9,19 @@ All URLs in the OpenStack catalog are rewritten to point to the proxy itself, wh
 Download the binary for linux64 on this repository's [release page](https://github.com/shiftstack/os-proxy/releases) or build it with `go build .`.
 
 **Required configuration:**
-* **-authurl**:  URL of the remote OpenStack Keystone.
-* **-proxyurl**: URL the proxy will be reachable at.
+* **--remote-authurl**: URL of the remote OpenStack Keystone.
+* **--proxy-url**: URL the proxy will be reachable at.
+
+**Optional configuration:**
+* **--remote-cacert**: path of the local PEM-encoded file containing the CA for the remote certificate.
+* **--insecure**: skip TLS verification.
 
 Example:
 ```shell
-./os-proxy -authurl='https://openstack.example.com:13000/v3' -proxyurl='https://localhost:15432'
+./os-proxy \
+	--remote-authurl https://openstack.example.com:13000/v3 \
+    --remote-cacert /var/openstack/cert.pem \
+    --proxy-url https://localhost:15432'
 ```
 
 ## Deploy on the OpenStack cloud
