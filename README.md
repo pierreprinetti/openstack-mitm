@@ -20,8 +20,8 @@ Example:
 ```shell
 ./os-proxy \
 	--remote-authurl https://openstack.example.com:13000/v3 \
-    --remote-cacert /var/openstack/cert.pem \
-    --proxy-url https://localhost:15432'
+	--remote-cacert /var/openstack/cert.pem \
+	--proxy-url https://localhost:15432'
 ```
 
 ## Deploy on the OpenStack cloud
