@@ -75,9 +75,10 @@ osproxy_pid="$!"
 
 sleep 5
 
-osproxy_response="$(curl -sSk 'https://localhost:15432/v3/auth/tokens')"
+osproxy_response="$(timeout -v --preserve-status 5s curl -sSk 'https://localhost:15432/v3/auth/tokens')"
+>&2 echo "$osproxy_response"
 cinder_url="$(jq -r '.token.catalog[0].endpoints[0].url' <<< "$osproxy_response")"
-cinder_response="$(curl -sSk "$cinder_url")"
+cinder_response="$(timeout -v --preserve-status 5s curl -sSk "$cinder_url")"
 cinder_req_path="$(grep 'GET' "$cinder_request" | cut -d ' ' -f 2)"
 
 if [[ "$cinder_req_path" != "${cinder_path}" ]]; then
