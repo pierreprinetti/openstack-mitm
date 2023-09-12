@@ -44,7 +44,7 @@ cleanup() {
 trap cleanup EXIT
 
 >&2 echo "Exposing a mock Keystone on port $keystone_port"
-nc -l "$keystone_port" >/dev/null <<EOF &
+ncat -l "$keystone_port" >/dev/null <<EOF &
 HTTP/1.1 201 Created
 Date: $(TZ=GMT date +'%a, %d %b %Y %H:%M:%S %Z')
 Server: Apache
@@ -58,7 +58,7 @@ EOF
 keystone_pid="$!"
 
 >&2 echo "Exposing a mock Cinder on port $cinder_port"
-nc -l "$cinder_port" >"$cinder_request" <<EOF &
+ncat -l "$cinder_port" >"$cinder_request" <<EOF &
 HTTP/1.1 200 OK
 Date: $(TZ=GMT date +'%a, %d %b %Y %H:%M:%S %Z')
 Server: Netcat
@@ -69,14 +69,13 @@ EOF
 cinder_pid="$!"
 
 "$osproxy" \
-	-authurl='http://localhost:8000' \
-	-proxyurl='https://localhost:15432' &
+	--remote-authurl='http://localhost:8000' \
+	--proxy-url='https://localhost:15432' &
 osproxy_pid="$!"
 
 sleep 5
 
 osproxy_response="$(timeout -v --preserve-status 5s curl -sSk 'https://localhost:15432/v3/auth/tokens')"
->&2 echo "$osproxy_response"
 cinder_url="$(jq -r '.token.catalog[0].endpoints[0].url' <<< "$osproxy_response")"
 cinder_response="$(timeout -v --preserve-status 5s curl -sSk "$cinder_url")"
 cinder_req_path="$(grep 'GET' "$cinder_request" | cut -d ' ' -f 2)"
