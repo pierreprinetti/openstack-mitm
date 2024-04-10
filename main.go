@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/shiftstack/os-proxy/proxy"
+	"github.com/pierreprinetti/openstack-mitm/proxy"
 )
 
 const (

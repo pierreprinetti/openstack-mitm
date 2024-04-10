@@ -1,4 +1,4 @@
-# os-proxy
+# openstack-mitm
 
 Proxies calls to the OpenStack API with a self-signed certificate.
 
@@ -6,7 +6,7 @@ All URLs in the OpenStack catalog are rewritten to point to the proxy itself, wh
 
 ## Use locally
 
-Download the binary for linux64 on this repository's [release page](https://github.com/shiftstack/os-proxy/releases) or build it with `go build .`.
+Download the binary for linux64 on this repository's [release page](https://github.com/pierreprinetti/openstack-mitm/releases) or build it with `go build .`.
 
 **Required configuration:**
 * **--remote-authurl**: URL of the remote OpenStack Keystone.
