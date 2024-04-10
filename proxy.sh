@@ -17,11 +17,11 @@
 set -Eeuo pipefail
 
 declare -r \
-	osproxy_url='https://github.com/shiftstack/os-proxy/releases/download/v1.0.1/os-proxy' \
-	osproxy_sha512='d4a9210091e4d1ed4c697762ac5ed59625c97dbdf3ce58cc4bbd7f3821190f482e2464558fbd08ea737744a7cc496e9b6db4381c3941b8fb1c864d1bec35113f'
+	osproxy_url='https://github.com/pierreprinetti/openstack-mitm/releases/download/v1.0.2/openstack-mitm' \
+	osproxy_sha512='f6a294643a3d4a808da047c12c176f339e054b4790a4f5f2c70a9dab5940a0d876a1591dc43ab15dbc4da72d6f2e985b8fff8c2c2b7343bb28356d79e702d96d'
 
 print_help() {
-	echo -e "github.com/shiftstack/os-proxy"
+	echo -e "github.com/pierreprinetti/openstack-mitm"
 	echo -e "Proxy calls to the OpenStack API"
 	echo
 	echo -e "Required configuration:"

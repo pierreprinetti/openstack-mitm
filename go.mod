@@ -1,5 +1,5 @@
-module github.com/shiftstack/os-proxy
+module github.com/pierreprinetti/openstack-mitm
 
-go 1.21.1
+go 1.22.2
 
 require github.com/gofrs/uuid/v5 v5.0.0
