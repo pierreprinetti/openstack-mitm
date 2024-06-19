@@ -6,7 +6,7 @@ All URLs in the OpenStack catalog are rewritten to point to the proxy itself, wh
 
 ## Use locally
 
-Download the binary for linux64 on this repository's [release page](https://github.com/pierreprinetti/openstack-mitm/releases) or build it with `go build .`.
+Download the binary for linux64 on this repository's [release page](https://github.com/pierreprinetti/openstack-mitm/releases) or build it with `go build ./cmd/osp-mitm`.
 
 **Required configuration:**
 * **--remote-authurl**: URL of the remote OpenStack Keystone.
@@ -18,42 +18,8 @@ Download the binary for linux64 on this repository's [release page](https://gith
 
 Example:
 ```shell
-./os-proxy \
+./osp-mitm \
 	--remote-authurl https://openstack.example.com:13000/v3 \
 	--remote-cacert /var/openstack/cert.pem \
 	--proxy-url https://localhost:15432'
 ```
-
-## Deploy on the OpenStack cloud
-
-The `proxy.sh` helper script deploys os-proxy to an OpenStack VM and attaches a floating IP for external connectivity.
-The Ignition configuration injected in the VM triggers the download of a prebuilt `os-proxy` binary from Github.
-
-Set `OS_PROXY` in the environment, and have the `openstack` client in $PATH.
-
-**Required configuration:**
-* **-a**: URL of the remote OpenStack Keystone.
-* **-u**: URL the proxy will be reachable at.
-* **-f**: Flavor of the proxy Nova instance.
-* **-i**: Image of the proxy Nova instance.
-* **-u**: Name or ID of the public network where to create the floating IP.
-
-**Example:**
-```shell
-./proxy.sh \
-	-a 'https://keystone.example.com:13000' \
-	-u 'https://proxy.example.com:5443'     \
-	-f 'm1.s2.medium'                       \
-	-i 'rhcos'                              \
-	-n 'external'
-```
-
-## Test
-
-Run `make test`.
-
-Requirements for the test:
-* Bash v4+
-* Go
-* Netcat
-* Jq

@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/pierreprinetti/openstack-mitm/proxy"
+	"github.com/pierreprinetti/openstack-mitm/pkg/proxy"
 )
 
 const (
