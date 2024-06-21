@@ -6,20 +6,36 @@ All URLs in the OpenStack catalog are rewritten to point to the proxy itself, wh
 
 ## Use locally
 
-Download the binary for linux64 on this repository's [release page](https://github.com/pierreprinetti/openstack-mitm/releases) or build it with `go build ./cmd/osp-mitm`.
+Build with `go build ./cmd/osp-mitm`.
 
-**Required configuration:**
-* **--remote-authurl**: URL of the remote OpenStack Keystone.
-* **--proxy-url**: URL the proxy will be reachable at.
+`osp-mitm` will parse a `clouds.yaml` file at the known locations, similar to what python-openstackclient does.
 
-**Optional configuration:**
-* **--remote-cacert**: path of the local PEM-encoded file containing the CA for the remote certificate.
-* **--insecure**: skip TLS verification.
+By default the server will listen on localhost on port 13000.
 
-Example:
+**Configuration:**
+* **--url**: URL osp-mitm will be reachable at. Default: `http://locahost:13000`
+* **--cert**: path of the local PEM-encoded HTTPS certificate file. Mandatory if the scheme of --url is HTTPS.
+* **--key**: path of the local PEM-encoded HTTPS certificate key file. Mandatory if the scheme of --url is HTTPS.
+* **-o**: If provided, a new clouds.yaml that points to osp-mitm is created at that location.
+
+## Examples
+
+Local server:
+```shell
+export OS_CLOUD=openstack
+./osp-mitm -o mitm-clouds.yaml
+```
+```shell
+export OS_CLIENT_CONFIG_FILE=./mitm-clouds.yaml
+openstack server list
+```
+
+Exposing osp-mitm on the network, with HTTPS:
+
 ```shell
 ./osp-mitm \
-	--remote-authurl https://openstack.example.com:13000/v3 \
-	--remote-cacert /var/openstack/cert.pem \
-	--proxy-url https://localhost:15432'
+	--url https://myserver.example.com:13000 \
+	--cert /var/run/osp-cert.pem \
+	--key /var/run/osp-key.pem' \
+	-o mitm-clouds.yaml
 ```

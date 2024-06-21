@@ -17,6 +17,7 @@ package proxy
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"io"
 	"log"
 	"net/http"
@@ -28,7 +29,7 @@ import (
 
 type contextKey string
 
-var urlKey contextKey = "original url"
+const urlKey contextKey = "original url"
 
 var urlRE = regexp.MustCompile(`"url":\s?"(.*?)"`)
 
@@ -52,8 +53,8 @@ func (t loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func NewOpenstackProxy(proxyURL, osAuth string, transport http.RoundTripper) (*httputil.ReverseProxy, error) {
-	osAuthURL, err := url.Parse(osAuth)
+func NewOpenstackProxyHandler(proxyURL, identityEndpoint string, tlsConfig *tls.Config) (*httputil.ReverseProxy, error) {
+	osAuthURL, err := url.Parse(identityEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +75,11 @@ func NewOpenstackProxy(proxyURL, osAuth string, transport http.RoundTripper) (*h
 			panic(err)
 		}
 		return []byte(`"url": "` + u.String() + `"`)
+	}
+
+	transport := http.DefaultTransport
+	if tlsConfig != nil {
+		transport.(*http.Transport).TLSClientConfig = tlsConfig
 	}
 
 	return &httputil.ReverseProxy{

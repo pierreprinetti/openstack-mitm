@@ -16,101 +16,86 @@ package main
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
+	"github.com/gophercloud/gophercloud/v2/openstack/config/clouds"
+
+	"github.com/pierreprinetti/openstack-mitm/pkg/cloudout"
 	"github.com/pierreprinetti/openstack-mitm/pkg/proxy"
 )
 
-const (
-	defaultPort = "5443"
-)
-
 var (
-	proxyURLstring = flag.String("proxy-url", "", "The address this proxy will be reachable at")
-	osAuthURL      = flag.String("remote-authurl", "", "OpenStack entrypoint (OS_AUTH_URL)")
-	osCaCert       = flag.String("remote-cacert", "", "OpenStack CA certificate (OS_CACERT)")
-	insecure       = flag.Bool("insecure", false, "Insecure connection to OpenStack")
+	mitmURL          *url.URL
+	identityEndpoint string
+	tlsConfig        *tls.Config
+
+	tlsCertPath string
+	tlsKeyPath  string
 )
 
 func init() {
+	var (
+		mitmURLstring   string
+		outputCloudPath string
+	)
+
+	flag.StringVar(&mitmURLstring, "url", "http://localhost:13000", "The address this MITM proxy will be reachable at")
+	flag.StringVar(&tlsCertPath, "cert", "", "Path to the PEM-encoded TLS certificate")
+	flag.StringVar(&tlsKeyPath, "key", "", "Path to the PEM-encoded TLS certificate private key")
+	flag.StringVar(&outputCloudPath, "o", "", "Path of the clouds.yaml file that points to this MITM proxy (optional)")
 	flag.Parse()
 
-	var errexit bool
-	if *proxyURLstring == "" {
-		errexit = true
-		log.Print("Missing required parameter: --proxyurl")
+	var err error
+	mitmURL, err = url.Parse(mitmURLstring)
+	if err != nil {
+		log.Fatalf("Failed to parse the URL (%q): %v", mitmURLstring, err)
 	}
 
-	if *osAuthURL == "" {
-		log.Print("Missing required parameter: --authurl")
+	authOptions, endpointOptions, parsedTLSConfig, err := clouds.Parse()
+	if err != nil {
+		log.Fatalf("Failed to parse clouds.yaml: %v", err)
 	}
 
-	if errexit {
-		log.Fatal("Exiting.")
+	identityEndpoint = authOptions.IdentityEndpoint
+	tlsConfig = parsedTLSConfig
+
+	if outputCloudPath != "" {
+		f, err := os.Create(outputCloudPath)
+		if err != nil {
+			log.Fatalf("Failed to create clouds.yaml at the given destination (%q):%v", outputCloudPath, err)
+		}
+		if err := cloudout.Write(authOptions, endpointOptions, tlsConfig, mitmURL.String(), tlsCertPath, f); err != nil {
+			log.Fatalf("Failed to encode the output clouds.yaml: %v", err)
+		}
+		if err := f.Close(); err != nil {
+			log.Fatalf("Failed to finalize the clouds.yaml file: %v", err)
+		}
+		log.Printf("clouds.yaml written to %q", outputCloudPath)
 	}
 }
 
 func main() {
-	var proxyURL *url.URL
-	{
-		var err error
-		proxyURL, err = url.Parse(*proxyURLstring)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if proxyURL.Host == "" {
-			log.Fatal("The --proxyurl parameter is invalid. It should be in the form: 'https://host[:port]'.")
-		}
-
-		if proxyURL.Path != "" {
-			log.Fatal("The --proxyurl URL should have empty path.")
-		}
-
-		if proxyURL.Port() == "" {
-			proxyURL.Host = proxyURL.Hostname() + ":" + defaultPort
-		}
-	}
-
-	transport := http.DefaultTransport.(*http.Transport)
-
-	if caCertPath := *osCaCert; caCertPath != "" {
-		b, err := os.ReadFile(caCertPath)
-		if err != nil {
-			log.Fatalf("Failed to read the given PEM certificate: %v", err)
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(b) {
-			log.Fatal("Failed to parse the given PEM certificate")
-		}
-		transport.TLSClientConfig = &tls.Config{RootCAs: certPool}
-	}
-
-	if *insecure {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: *insecure}
-	}
-
-	p, err := proxy.NewOpenstackProxy(proxyURL.String(), *osAuthURL, transport)
+	p, err := proxy.NewOpenstackProxyHandler(mitmURL.String(), identityEndpoint, tlsConfig)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to build the OpenStack MITM proxy: %v", err)
 	}
 
-	{
-		if err := generateCertificate(proxyURL.Hostname()); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("Certificate correctly generated for %q", proxyURL.Hostname())
+	listenURL := ":" + mitmURL.Port()
+
+	log.Printf("Proxying to %q", identityEndpoint)
+	log.Printf("Listening on %q", listenURL)
+
+	switch strings.ToLower(mitmURL.Scheme) {
+	case "http":
+		log.Fatal(http.ListenAndServe(listenURL, p))
+	case "https":
+		log.Fatal(http.ListenAndServeTLS(listenURL, tlsCertPath, tlsKeyPath, p))
+	default:
+		log.Fatalf("Unknown scheme %q", mitmURL.Scheme)
 	}
-
-	log.Printf("Proxying to %q", *osAuthURL)
-	log.Printf("Listening on %q", proxyURL)
-
-	log.Fatal(
-		http.ListenAndServeTLS(":"+proxyURL.Port(), "cert.pem", "key.pem", p),
-	)
 }
