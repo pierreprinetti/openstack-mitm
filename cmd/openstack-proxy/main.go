@@ -25,8 +25,8 @@ import (
 
 	"github.com/gophercloud/gophercloud/v2/openstack/config/clouds"
 
-	"github.com/pierreprinetti/openstack-mitm/pkg/cloudout"
-	"github.com/pierreprinetti/openstack-mitm/pkg/proxy"
+	"github.com/pierreprinetti/openstack-proxy/pkg/cloudout"
+	"github.com/pierreprinetti/openstack-proxy/pkg/proxy"
 )
 
 var (
@@ -44,10 +44,10 @@ func init() {
 		outputCloudPath string
 	)
 
-	flag.StringVar(&mitmURLstring, "url", "http://localhost:13000", "The address this MITM proxy will be reachable at")
-	flag.StringVar(&tlsCertPath, "cert", "", "Path to the PEM-encoded TLS certificate")
-	flag.StringVar(&tlsKeyPath, "key", "", "Path to the PEM-encoded TLS certificate private key")
-	flag.StringVar(&outputCloudPath, "o", "", "Path of the clouds.yaml file that points to this MITM proxy (optional)")
+	flag.StringVar(&mitmURLstring, "url", "http://localhost:13000", "The address this proxy will be reachable at")
+	flag.StringVar(&tlsCertPath, "cert", "", "Path of the local PEM-encoded HTTPS certificate file. Mandatory if the scheme of --url is HTTPS")
+	flag.StringVar(&tlsKeyPath, "key", "", "Path of the local PEM-encoded HTTPS certificate key file. Mandatory if the scheme of --url is HTTPS")
+	flag.StringVar(&outputCloudPath, "o", "", "Location where to write a new cloud credentials file that points to the openstack-proxy instance (optional)")
 	flag.Parse()
 
 	var err error

@@ -1,6 +1,6 @@
 
-osp-mitm: cmd/osp-mitm pkg/proxy
-	go build ./cmd/osp-mitm
+openstack-proxy: cmd/openstack-proxy pkg/proxy
+	go build ./cmd/openstack-proxy
 
 test: test-unit test-integration
 .PHONY: test
