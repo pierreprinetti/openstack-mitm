@@ -12,7 +12,7 @@ COPY ./cmd ./cmd
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /openstack-proxy ./cmd/openstack-proxy
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 ENV OS_CLOUD=openstack OS_CLIENT_CONFIG_FILE=/config/clouds.yaml
 
